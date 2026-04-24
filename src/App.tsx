@@ -24,23 +24,40 @@ function App() {
           *,
           health_checks(last_ping, status),
           subscriptions(next_payment_date)
-        `);
+        `)
+        .order('created_at', { ascending: false });
+      
+      // Ordenar los health_checks internamente por fecha para asegurar que el [0] sea el más nuevo
+      data?.forEach((p: any) => {
+        if (p.health_checks) {
+          p.health_checks.sort((a: any, b: any) => new Date(b.last_ping).getTime() - new Date(a.last_ping).getTime());
+        }
+      });
 
       if (error) throw error;
 
-      const formattedProjects: Project[] = data.map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        type: p.type,
-        url: p.url,
-        admin_url: p.admin_url,
-        api_key: p.api_key,
-        status: p.status,
-        health: p.health_checks?.[0]?.status || 'offline',
-        last_ping: p.health_checks?.[0]?.last_ping || p.created_at,
-        next_payment: p.subscriptions?.[0]?.next_payment_date || 'N/A',
-        metrics: { users: 0, sales: 0, errors: 0 } // Metrics would be fetched from the metrics table in a real scenario
-      }));
+      const formattedProjects: Project[] = data.map((p: any) => {
+        const lastPing = p.health_checks?.[0]?.last_ping;
+        const now = new Date();
+        const pingDate = lastPing ? new Date(lastPing) : null;
+        
+        // Si el último ping fue hace menos de 3 minutos, está ONLINE
+        const isOnline = pingDate && (now.getTime() - pingDate.getTime()) < 180000;
+
+        return {
+          id: p.id,
+          name: p.name,
+          type: p.type,
+          url: p.url,
+          admin_url: p.admin_url,
+          api_key: p.api_key,
+          status: p.status,
+          health: isOnline ? 'online' : 'offline',
+          last_ping: lastPing || p.created_at,
+          next_payment: p.subscriptions?.[0]?.next_payment_date || 'N/A',
+          metrics: { users: 0, sales: 0, errors: 0 }
+        };
+      });
 
       setProjects(formattedProjects);
     } catch (error) {
@@ -52,6 +69,10 @@ function App() {
 
   useEffect(() => {
     fetchProjects();
+    
+    // Auto-actualizar cada 10 segundos para ver cambios de estado
+    const interval = setInterval(fetchProjects, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleAddProject = async (newProjectData: any) => {
