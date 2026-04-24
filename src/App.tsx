@@ -24,19 +24,20 @@ function App() {
       if (projectsError) throw projectsError;
       if (!projectsData) return;
 
-      // Obtenemos los pings y suscripciones por separado para mayor seguridad
+      // Obtenemos pings, suscripciones y métricas
       const { data: healthData } = await supabase.from('health_checks').select('*');
       const { data: subsData } = await supabase.from('subscriptions').select('*');
+      const { data: metricsData } = await supabase.from('metrics').select('*').order('created_at', { ascending: false });
 
       const formattedProjects: Project[] = projectsData.map((p: any) => {
-        // Buscamos el ping de este proyecto
         const health = healthData?.find(h => h.project_id === p.id);
         const sub = subsData?.find(s => s.project_id === p.id);
         
+        // Obtenemos la última métrica registrada para este proyecto
+        const lastMetric = metricsData?.find(m => m.project_id === p.id);
+        
         const now = new Date();
         const pingDate = health?.last_ping ? new Date(health.last_ping) : null;
-        
-        // ONLINE si el ping tiene menos de 5 minutos
         const isOnline = pingDate && (now.getTime() - pingDate.getTime()) < 300000;
 
         return {
@@ -50,7 +51,11 @@ function App() {
           health: isOnline ? 'online' : 'offline',
           last_ping: health?.last_ping || p.created_at,
           next_payment: sub?.next_payment_date || 'N/A',
-          metrics: { users: 0, sales: 0, errors: 0 }
+          metrics: { 
+            users: lastMetric?.users || 0, 
+            sales: parseFloat(lastMetric?.sales || sub?.price || 0), 
+            errors: lastMetric?.errors || 0 
+          }
         };
       });
 

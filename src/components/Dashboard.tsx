@@ -19,11 +19,17 @@ const Dashboard = ({ activeTab, projects, onProjectClick, onNewProject }: Dashbo
     return true;
   });
 
+  // Cálculos reales basados en los proyectos cargados
+  const totalUsers = projects.reduce((acc, p) => acc + (p.metrics?.users || 0), 0);
+  const totalSales = projects.reduce((acc, p) => acc + (p.metrics?.sales || 0), 0);
+  const totalErrors = projects.reduce((acc, p) => acc + (p.metrics?.errors || 0), 0);
+  const activeProjects = projects.filter(p => p.health === 'online').length;
+
   const stats = [
-    { label: 'Proyectos Activos', value: projects.length, icon: ArrowUpRight, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-    { label: 'Usuarios Totales', value: '1,284', icon: Users, color: 'text-blue-500', bg: 'bg-blue-50' },
-    { label: 'Ingresos Mensuales', value: '$4,250', icon: DollarSign, color: 'text-indigo-500', bg: 'bg-indigo-50' },
-    { label: 'Incidencias', value: '2', icon: AlertCircle, color: 'text-red-500', bg: 'bg-red-50' },
+    { label: 'Online Ahora', value: activeProjects, icon: ArrowUpRight, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+    { label: 'Usuarios Totales', value: totalUsers.toLocaleString(), icon: Users, color: 'text-blue-500', bg: 'bg-blue-50' },
+    { label: 'Ingresos Mensuales', value: `$${totalSales.toLocaleString()}`, icon: DollarSign, color: 'text-indigo-500', bg: 'bg-indigo-50' },
+    { label: 'Incidencias (Errores)', value: totalErrors, icon: AlertCircle, color: 'text-red-500', bg: 'bg-red-50' },
   ];
 
   const getTitle = () => {
