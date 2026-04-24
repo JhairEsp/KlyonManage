@@ -6,12 +6,35 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface ProjectModalProps {
   project: Project | null;
   onClose: () => void;
+  onUpdate: (id: string, updates: any) => Promise<void>;
 }
 
-const ProjectModal = ({ project, onClose }: ProjectModalProps) => {
+const ProjectModal = ({ project, onClose, onUpdate }: ProjectModalProps) => {
   const [copied, setCopied] = useState(false);
+  const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
   if (!project) return null;
+
+  const handleToggleStatus = async () => {
+    setLoadingAction('status');
+    const newStatus = project.status === 'active' ? 'suspended' : 'active';
+    await onUpdate(project.id, { status: newStatus });
+    setLoadingAction(null);
+  };
+
+  const handleTogglePopup = async () => {
+    setLoadingAction('popup');
+    // En un sistema real, aquí podrías abrir otro modal para escribir el mensaje
+    // Por ahora alternamos un mensaje por defecto
+    const remoteConfig = {
+      show_popup: true,
+      message: "Atención: Tu suscripción está por vencer. Por favor contacta a soporte.",
+      locked: false
+    };
+    await onUpdate(project.id, { remote_config: remoteConfig });
+    setLoadingAction(null);
+    alert('Mensaje de alerta activado');
+  };
 
   const copyApiKey = () => {
     navigator.clipboard.writeText(project.api_key);
@@ -124,6 +147,37 @@ const ProjectModal = ({ project, onClose }: ProjectModalProps) => {
                     <span className="text-sm font-medium text-slate-800">{new Date(project.last_ping).toLocaleTimeString()}</span>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Control Remoto</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <button 
+                  disabled={loadingAction !== null}
+                  onClick={handleTogglePopup}
+                  className="p-4 border-2 border-amber-100 bg-amber-50 rounded-2xl text-amber-700 hover:bg-amber-100 transition-all text-left disabled:opacity-50"
+                >
+                  <div className="font-bold text-sm mb-1">
+                    {loadingAction === 'popup' ? 'Enviando...' : 'Mandar Alerta Pago'}
+                  </div>
+                  <div className="text-[10px] opacity-70">Muestra un aviso de cobro en la web.</div>
+                </button>
+                <button 
+                  disabled={loadingAction !== null}
+                  onClick={handleToggleStatus}
+                  className={cn(
+                    "p-4 border-2 rounded-2xl text-left transition-all disabled:opacity-50",
+                    project.status === 'active' 
+                      ? "border-red-100 bg-red-50 text-red-700 hover:bg-red-100" 
+                      : "border-emerald-100 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                  )}
+                >
+                  <div className="font-bold text-sm mb-1">
+                    {loadingAction === 'status' ? 'Cambiando...' : (project.status === 'active' ? 'Desactivar Página' : 'Habilitar Página')}
+                  </div>
+                  <div className="text-[10px] opacity-70">{project.status === 'active' ? 'Bloquea el acceso a la web.' : 'Restaura el acceso normal.'}</div>
+                </button>
               </div>
             </div>
 

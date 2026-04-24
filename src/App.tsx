@@ -33,8 +33,12 @@ function App() {
         const health = healthData?.find(h => h.project_id === p.id);
         const sub = subsData?.find(s => s.project_id === p.id);
         
-        // Obtenemos la última métrica registrada para este proyecto
-        const lastMetric = metricsData?.find(m => m.project_id === p.id);
+        // SUMAMOS todas las métricas históricas de este proyecto
+        const projectMetrics = metricsData?.filter(m => m.project_id === p.id) || [];
+        
+        const totalUsers = projectMetrics.reduce((acc, m) => acc + (m.users || 0), 0);
+        const totalSales = projectMetrics.reduce((acc, m) => acc + (parseFloat(m.sales) || 0), 0);
+        const totalErrors = projectMetrics.reduce((acc, m) => acc + (m.errors || 0), 0);
         
         const now = new Date();
         const pingDate = health?.last_ping ? new Date(health.last_ping) : null;
@@ -52,9 +56,9 @@ function App() {
           last_ping: health?.last_ping || p.created_at,
           next_payment: sub?.next_payment_date || 'N/A',
           metrics: { 
-            users: lastMetric?.users || 0, 
-            sales: parseFloat(lastMetric?.sales || sub?.price || 0), 
-            errors: lastMetric?.errors || 0 
+            users: totalUsers || (health ? 1 : 0), // Si hay ping pero no métricas, mostramos al menos 1 usuario
+            sales: totalSales || parseFloat(sub?.price || 0), 
+            errors: totalErrors 
           }
         };
       });
@@ -109,6 +113,27 @@ function App() {
     }
   };
 
+  const handleUpdateProject = async (id: string, updates: any) => {
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update(updates)
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      // Si el proyecto actualizado es el que está seleccionado, actualizamos el modal también
+      if (selectedProject && selectedProject.id === id) {
+        setSelectedProject({ ...selectedProject, ...updates });
+      }
+
+      fetchProjects();
+    } catch (error) {
+      console.error('Error updating project:', error);
+      alert('No se pudo actualizar el proyecto.');
+    }
+  };
+
   return (
     <div className="flex bg-slate-50 min-h-screen font-sans antialiased text-slate-900">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -131,6 +156,7 @@ function App() {
       <ProjectModal 
         project={selectedProject} 
         onClose={() => setSelectedProject(null)} 
+        onUpdate={handleUpdateProject}
       />
 
       <CreateProjectModal 
