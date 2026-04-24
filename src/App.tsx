@@ -13,36 +13,31 @@ function App() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch projects from Supabase
   const fetchProjects = async () => {
-    setLoading(true);
     try {
-      // We join with health_checks and subscriptions to get the full state
-      const { data, error } = await supabase
+      // Simplificamos la consulta para evitar errores de joins profundos
+      const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
-        .select(`
-          *,
-          health_checks(last_ping, status),
-          subscriptions(next_payment_date)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
-      
-      // Ordenar los health_checks internamente por fecha para asegurar que el [0] sea el más nuevo
-      data?.forEach((p: any) => {
-        if (p.health_checks) {
-          p.health_checks.sort((a: any, b: any) => new Date(b.last_ping).getTime() - new Date(a.last_ping).getTime());
-        }
-      });
 
-      if (error) throw error;
+      if (projectsError) throw projectsError;
+      if (!projectsData) return;
 
-      const formattedProjects: Project[] = data.map((p: any) => {
-        const lastPing = p.health_checks?.[0]?.last_ping;
-        const now = new Date();
-        const pingDate = lastPing ? new Date(lastPing) : null;
+      // Obtenemos los pings y suscripciones por separado para mayor seguridad
+      const { data: healthData } = await supabase.from('health_checks').select('*');
+      const { data: subsData } = await supabase.from('subscriptions').select('*');
+
+      const formattedProjects: Project[] = projectsData.map((p: any) => {
+        // Buscamos el ping de este proyecto
+        const health = healthData?.find(h => h.project_id === p.id);
+        const sub = subsData?.find(s => s.project_id === p.id);
         
-        // Si el último ping fue hace menos de 3 minutos, está ONLINE
-        const isOnline = pingDate && (now.getTime() - pingDate.getTime()) < 180000;
+        const now = new Date();
+        const pingDate = health?.last_ping ? new Date(health.last_ping) : null;
+        
+        // ONLINE si el ping tiene menos de 5 minutos
+        const isOnline = pingDate && (now.getTime() - pingDate.getTime()) < 300000;
 
         return {
           id: p.id,
@@ -53,8 +48,8 @@ function App() {
           api_key: p.api_key,
           status: p.status,
           health: isOnline ? 'online' : 'offline',
-          last_ping: lastPing || p.created_at,
-          next_payment: p.subscriptions?.[0]?.next_payment_date || 'N/A',
+          last_ping: health?.last_ping || p.created_at,
+          next_payment: sub?.next_payment_date || 'N/A',
           metrics: { users: 0, sales: 0, errors: 0 }
         };
       });
