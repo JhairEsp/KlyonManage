@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://ihodhcdxxzkmhqdbmanm.supabase.co';
-const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlob2RoY2R4eHprbWhxZGJtYW5tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5OTMwMjAsImV4cCI6MjA5MjU2OTAyMH0.oW_EGXkGcNYDYc269FhBsSCMFZd8SooGWoLyrNK1Cg8';
+const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://ouziqhknofdyvkbvumex.supabase.co';
+const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im91emlxaGtub2ZkeXZrYnZ1bWV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzODQ1MTcsImV4cCI6MjA5Mzk2MDUxN30.iE0w8BMH5VgfK7btISKv7RPA5w2-alkxDrUBGCQMbQc';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default async function handler(req, res) {
@@ -19,7 +19,7 @@ export default async function handler(req, res) {
     if (!projectId || !apiKey) return res.status(400).json({ error: 'Missing data' });
 
     // Tu clave de validación
-    if (apiKey !== 'eb79ae517cd24ef118c610bdea35dc67d69a8d27378c29dd') {
+    if (apiKey !== 'e463a3d76c45635e547811396d5635e3ad6643b22f91ece5') {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
